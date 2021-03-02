@@ -1,0 +1,32 @@
+#!/anaconda3/bin/python3
+
+
+from os import listdir, path
+import pandas as pd
+
+
+input_path = '/home/leo/VT_for_Lakiy/wfs_15-cha/'
+min_channels = 15
+
+
+filepaths = [path.join(input_path, f) for f in listdir(input_path)]
+
+n = []
+for filepath in filepaths:
+    with open(filepath) as f:
+        header = f.readline()
+        n.append(len(header.split()))
+
+df = pd.DataFrame(list(zip(filepaths, n)), columns=['filepath', 'n'])
+
+df = df[df.n >= min_channels]
+print(len(df)); exit()
+
+
+for i, row in df.iterrows():
+    print(f'scp vulca:{row.filepath} /Users/leo/Data/Volcanology/lakiy_db/VT/.'); exit()
+
+
+
+
+

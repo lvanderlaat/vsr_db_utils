@@ -1,0 +1,81 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import path, system
+import json
+
+# Other dependencies
+from obspy import read, read_events, UTCDateTime
+
+# Local files
+from lakiy_utils.picking import pick
+from lakiy_utils.io import MSD_FNAME_FMT, JSN_FNAME_FMT, st_to_fname
+
+
+LABEL = 'VT'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--inppath', help='Path folder to move picked events')
+    parser.add_argument('-o', '--outpath', help='Path folder to move picked events')
+    parser.add_argument('-e', '--eventid', help='Number of event', type=str)
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    msd_filepath = path.join(args.inppath, args.eventid + '.msd')
+    xml_filepath = path.join(args.inppath, args.eventid + '.xml')
+
+    st = read(msd_filepath)
+
+    ev = read_events(xml_filepath)[0]
+
+    stations = list(set([tr.stats.station for tr in st]))
+
+    picks = [
+        p for p in ev.picks
+        if p.waveform_id.station_code in stations
+        and p.phase_hint == 'P'
+    ]
+
+    d = {}
+
+    for tr in st:
+        if tr.stats.component != 'Z':
+            continue
+
+        p = [p for p in picks if p.waveform_id.station_code == tr.stats.station]
+
+        if len(p) > 0:
+            p = p[0]
+        else:
+            p = None
+
+        times = pick(tr, p=p)
+
+        if len(times) == 1:                # P already picked, coda just picked
+            d[tr.stats.station] = {}
+            d[tr.stats.station]['P']  = str(p.time)
+            d[tr.stats.station]['Cs'] = str(times[0])
+        elif len(times) == 2:              # both P and coda just picked
+            d[tr.stats.station] = {}
+            d[tr.stats.station]['P']  = str(min(times))
+            d[tr.stats.station]['Cs'] = str(max(times))
+
+    msd_outpath = path.join(
+        args.outpath,
+        MSD_FNAME_FMT.format(**st_to_fname(LABEL, st))
+    )
+    jsn_outpath = path.join(
+        args.outpath,
+        JSN_FNAME_FMT.format(**st_to_fname(LABEL, st))
+    )
+
+    system(f'cp {msd_filepath} {msd_outpath}')
+
+    with open(jsn_outpath, 'w') as f:
+        json.dump(d, f, indent=4)

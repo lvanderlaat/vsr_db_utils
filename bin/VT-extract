@@ -1,0 +1,66 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import path
+
+# Other dependencies
+import pandas as pd
+
+# Local files
+from lakiy_utils.waveform import extract
+from lakiy_utils.catalog import iterate_PHA_cat
+
+
+WAVES_PATH  = '/opt/rtsystem/wfs'
+OUTNAME_FMT = '{year}.{julday:03d}.{hour:02d}.{minute:02d}.{second:02d}.mseed'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('phafile', help='Path to PHA file')
+    parser.add_argument('stations', help='Path to stations csv file')
+    parser.add_argument('outpath', help='Path folder with mseed files')
+    parser.add_argument('--pre', default=30, type=int,
+                        help='Seconds before pick')
+    parser.add_argument('--pos', default=200, type=int,
+                        help='Seconds after pick')
+    return parser.parse_args()
+
+
+def get_eID(event):
+    return event.resource_id.id.split('/')[-1]
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    df = pd.read_csv(args.stations)
+    stations = list(df.station.unique())
+
+    for i, ev in enumerate(iterate_PHA_cat(args.phafile)):
+        print(i)
+
+        stations_in_event = set([
+            pick.waveform_id.station_code for pick in ev.picks
+            if pick.waveform_id.station_code in stations
+        ])
+
+        if len(stations_in_event) == 0:
+            continue
+
+        starttime = min([
+            pick.time for pick in ev.picks
+            if pick.waveform_id.station_code in stations
+        ]) - args.pre
+
+        endtime = max([
+            pick.time for pick in ev.picks
+            if pick.waveform_id.station_code in stations
+        ]) + args.pos
+
+        st = extract(WAVES_PATH, starttime, endtime, stations, channels=['HH*'])
+
+        eventid = get_eID(ev)
+        st.write(path.join(args.outpath, eventid + '.msd'), format='MSEED')
+        ev.write(path.join(args.outpath, eventid + '.xml'), format='QUAKEML')

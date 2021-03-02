@@ -1,0 +1,62 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import listdir, path
+import json
+
+# Other dependencies
+from obspy import read, UTCDateTime
+
+# Local files
+from lakiy_utils.waveform import st_to_lakiy
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--inppath', help='Input folder path')
+    parser.add_argument('-o', '--outpath', help='Output folder path')
+    parser.add_argument('-m', '--mode', help='detection/classification')
+    parser.add_argument('--pre', default=0.25, type=float,
+                        help='Seconds before pick')
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    eventids = list(set([
+        path.splitext(f)[0] for f in listdir(args.inppath) if f != '.DS_Store'
+    ]))
+
+    for eventid in eventids:
+        print(eventid)
+
+        label = eventid.split('.')[0]
+
+        msd_fpath = path.join(args.inppath, eventid + '.mseed')
+        jsn_fpath = path.join(args.inppath, eventid + '.json')
+
+        st = read(msd_fpath)
+        st.sort()
+
+        with open(jsn_fpath) as f:
+            d = json.load(f)
+
+        stations = list(d.keys())
+
+        duration = min(
+            UTCDateTime(d[s]['Cs']) - UTCDateTime(d[s]['P']) for s in stations
+        ) + args.pre
+
+        for tr in st:
+            station = tr.stats.station
+            if station not in stations:
+                st.remove(tr)
+                continue
+
+            starttime = UTCDateTime(d[station]['P']) - args.pre
+            endtime   = starttime + duration
+            tr.trim(starttime, endtime)
+
+        st_to_lakiy(st, label, args.outpath, args.mode)
+        exit()

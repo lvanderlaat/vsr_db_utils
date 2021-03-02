@@ -1,0 +1,43 @@
+#!/anaconda3/bin/python3
+
+
+# from collections import Counter
+from os import path, listdir, system
+
+import numpy as np
+
+
+folderpath = '/Users/leo/Data/Volcanology/lakiy_db/wfs'
+outpath = '/Users/leo/Data/Volcanology/lakiy_db/wfs_for_detection'
+
+labels = list(set([f.split('.')[1] for f in listdir(folderpath)]))
+labels.sort()
+
+# count = dict(Counter(labels))
+
+print('\tLabel\tNumber of samples')
+print('\t=====\t=================')
+for label in labels:
+
+    if label == 'RND':
+        out_label = 'RND'
+        n = 1800
+    elif label == 'TOR':
+        continue
+    else:
+        out_label = 'SNL'
+        n = 300
+
+    filenames = [
+        f for f in listdir(folderpath) if f.split('.')[-1] == label
+    ]
+    filenames.sort()
+
+    idx = np.linspace(0, len(filenames)-1, n, dtype=int)
+    print(f'\t{label}\t{len(idx)}')
+
+    for i in idx:
+        inp = path.join(folderpath, filenames[i])
+        out_name = filenames[i].split('.')[0] + '.' + out_label
+        out = path.join(outpath, out_name)
+        system(f'cp {inp} {out}')

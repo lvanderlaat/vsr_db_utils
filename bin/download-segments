@@ -1,0 +1,50 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import path
+
+# Other dependencies
+import numpy as np
+from obspy import UTCDateTime
+from obspy.clients.fdsn import Client
+import pandas as pd
+
+from st_to_lakiy import st_to_lakiy
+
+BASE_URL = 'http://10.10.128.89:8080'
+# BASE_URL = 'http://10.10.128.91:8080'
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filepath', help='Path to segments csv file')
+    parser.add_argument('stations', help='Path to stations csv file')
+    parser.add_argument('outpath', help='Path folder with mseed files')
+    parser.add_argument('--window_length', default=3.99, help='Window length [s]')
+    args = parser.parse_args()
+
+    df = pd.read_csv(args.stations)
+    network = ','.join(df.network.unique())
+    station = ','.join(df.station.unique())
+    channel = ','.join(df.channel.unique())
+
+    df = pd.read_csv(args.filepath)
+
+    client = Client(BASE_URL)
+
+    for i, row in df.iterrows():
+        print(i, row.label)
+
+        starttime = UTCDateTime(row.starttime)
+        endtime   = UTCDateTime(row.endtime)
+
+        if endtime - starttime < args.window_length:
+            endtime = starttime + args.window_length
+
+        st = client.get_waveforms(
+            network=network, station=station, location='*', channel=channel,
+            starttime=starttime, endtime=endtime
+        )
+        st_to_lakiy(st, starttime, endtime, args.window_length, args.outpath,
+                    row.label)

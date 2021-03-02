@@ -1,0 +1,60 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import path
+
+# Other dependencies
+import pandas as pd
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('filepath', help='Path Swarm csv file')
+args = parser.parse_args()
+
+df = pd.read_csv(args.filepath, names=['datetime', 'station', 'label'])
+df.index = pd.to_datetime(df.datetime)
+df.datetime = pd.to_datetime(df.datetime)
+df.sort_index(inplace=True)
+df.index = range(len(df))
+
+dfl = df[df.label != 'end']
+dfe = df[df.label == 'end']
+
+# Check that every label has its end
+n_lab = len(dfl)
+n_end = len(dfe)
+
+if n_lab != n_end:
+    print(f'\t{n_lab} labels and {n_end} "end" labels')
+
+    for i, row in df.iterrows():
+        if (i % 2 == 0 and row.label == 'end') or (i % 2 != 0 and row.label != 'end'):
+            print(f'Check event at {row.datetime}'); exit()
+
+# If yes, continue
+for df in [dfl, dfe]:
+    df.reset_index(drop=True, inplace=True)
+
+df = pd.concat([dfl, dfe], axis=1, ignore_index=True)
+
+df = df.drop([1, 4, 5], axis=1)
+df.columns = ['starttime', 'label', 'endtime']
+df = df[['label', 'starttime', 'endtime']]
+
+outpath = path.abspath(args.filepath).split('_Swarm.csv')[0]+'_segments.csv'
+df.to_csv(outpath, index=False)
+
+df['duration'] = (df.endtime - df.starttime).dt.total_seconds()
+
+labels = list(df.label.unique())
+
+duration = {}
+for label in labels:
+    df_label = df[df.label == label]
+    dfl = df[df.label != 'end']
+    dfe = df[df.label == 'end']
+    print(f'{label}:\t{df_label.duration.sum()} s')
+
+
+

@@ -1,0 +1,33 @@
+#!/anaconda3/bin/python3
+
+import argparse
+from datetime import datetime
+from os import path
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('filepath', help='Path txt file')
+parser.add_argument('--wave_id', help='station channel network',
+                    default='CVTR HHZ TC')
+args = parser.parse_args()
+
+output_file = args.filepath.split('.')[0]+'_Swarm.csv'
+dirpath, filename = path.split(args.filepath)
+
+# date = datetime.strptime(path.args.filepath.split('.')[0], '%Y-%m-%d')
+date = datetime.strptime(filename.split('.')[0], '%Y-%m-%d')
+
+with open(output_file, 'w') as fo:
+    with open(args.filepath) as fi:
+        for line in fi:
+            label = line.split('-')[0]
+            for i, char in enumerate(line):
+                if char == ':':
+                    hour   = int(line[i-2]+line[i-1])
+                    minute = int(line[i+1]+line[i+2])
+
+                    dt = date
+                    dt = dt.replace(hour=hour)
+                    dt = dt.replace(minute=minute)
+
+                    fo.write(f'{dt},{args.wave_id},{label}\n')

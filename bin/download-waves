@@ -1,0 +1,46 @@
+#!/anaconda3/bin/python3
+
+# todo Debe tener opción para descargar otros días y si está ya en disco entonces
+# que simplemente haga scp
+
+# Python Standard Library
+import argparse
+from os import path, makedirs
+
+# Other dependencies
+from obspy import UTCDateTime
+from obspy.clients.fdsn import Client
+
+
+# BASE_URL = 'http://10.10.128.89:8080'
+BASE_URL = 'http://10.10.128.91:8080'
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filepath', help='Path Swarm csv file')
+    args = parser.parse_args()
+
+    with open(args.filepath) as f:
+        rows = f.readline().split(',')
+
+    starttime = UTCDateTime(rows[0])
+    starttime.hour = 0
+    starttime.minute = 0
+
+    endtime = starttime + 86400
+
+    station, channel, network = rows[1].split()
+
+    client = Client(BASE_URL)
+
+    try:
+        st = client.get_waveforms(
+            network=network, station=station, location='*', channel=channel,
+            starttime=starttime, endtime=endtime
+        )
+        st.merge(fill_value='interpolate', interpolation_samples=-1)
+        outpath = path.abspath(args.filepath).split('.')[0] + '.mseed'
+        st.write(outpath, format='MSEED')
+    except Exception as e:
+        print(e)
