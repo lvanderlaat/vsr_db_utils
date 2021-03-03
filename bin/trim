@@ -22,7 +22,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--cat_filepath', help='Catalog filepath')
     parser.add_argument('-s', '--stations', help='Path to stations csv file')
-    parser.add_argument('-o', '--outpath', help='Path folder with mseed files')
+    parser.add_argument('-o', '--outpath', help='Output folder path')
     parser.add_argument('-b', '--pre', type=int, help='Seconds Before pick')
     parser.add_argument('-a', '--pos', type=int, help='Seconds After pick')
     parser.add_argument('-m', '--mode', help='pha/gdocs')
