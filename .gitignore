@@ -10,3 +10,6 @@
 
 # MacOS hidden files
 .DS_Store
+
+# Rejected older files, just in case
+.bak/

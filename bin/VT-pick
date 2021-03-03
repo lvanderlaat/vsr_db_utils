@@ -9,8 +9,8 @@ import json
 from obspy import read, read_events, UTCDateTime
 
 # Local files
-from lakiy_utils.picking import pick
-from lakiy_utils.io import MSD_FNAME_FMT, JSN_FNAME_FMT, st_to_fname
+from vsr_db_utils.picking import pick
+from vsr_db_utils.io import MSD_FNAME_FMT, JSN_FNAME_FMT, st_to_fname
 
 
 LABEL = 'VT'

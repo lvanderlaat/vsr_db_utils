@@ -18,17 +18,16 @@ setup(
     install_requires = [
     ],
     scripts          = [
-        'bin/VT-extract',
         'bin/VT-filter-db',
         'bin/VT-pick',
         'bin/check-swarm',
         'bin/db-stats',
+        'bin/db-to-lakiy',
         'bin/download-retro',
         'bin/download-segments',
         'bin/download-waves',
         'bin/filter-db',
-        'bin/mseed-to-lakiy',
-        'bin/trim-segments',
+        'bin/trim',
         'bin/txt-to-swarm',
         'bin/waves-add-CVTR'
     ],

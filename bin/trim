@@ -1,0 +1,115 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import path
+
+# Other dependencies
+import pandas as pd
+from obspy import Stream, read
+
+# Local files
+from vsr_db_utils.waveform import extract, DB_MSEED_PATH_FMT
+from vsr_db_utils.catalog.pha import iterate_PHA_cat
+from vsr_db_utils.catalog.gdocs import iterate_days
+from vsr_db_utils.io import MSD_FNAME_FMT, XML_FNAME_FMT, st_to_fname
+
+
+WAVES_PATH  = '/opt/rtsystem/wfs'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--cat_filepath', help='Catalog filepath')
+    parser.add_argument('-s', '--stations', help='Path to stations csv file')
+    parser.add_argument('-o', '--outpath', help='Path folder with mseed files')
+    parser.add_argument('-b', '--pre', type=int, help='Seconds Before pick')
+    parser.add_argument('-a', '--pos', type=int, help='Seconds After pick')
+    parser.add_argument('-m', '--mode', help='pha/gdocs')
+    parser.add_argument('-l', '--label', help='VT/LF etc.')
+    return parser.parse_args()
+
+
+def get_eID(event):
+    return event.resource_id.id.split('/')[-1]
+
+
+def extract_pha(cat_filepath, stations, pre, pos, outpath, label):
+    for i, ev in enumerate(iterate_PHA_cat((cat_filepath))):
+        print(i)
+
+        stations_in_event = set([
+            pick.waveform_id.station_code for pick in ev.picks
+            if pick.waveform_id.station_code in stations
+        ])
+
+        if len(stations_in_event) == 0:
+            continue
+
+        starttime = min([
+            pick.time for pick in ev.picks
+            if pick.waveform_id.station_code in stations
+        ]) - pre
+
+        endtime = max([
+            pick.time for pick in ev.picks
+            if pick.waveform_id.station_code in stations
+        ]) + pos
+
+        st = extract(WAVES_PATH, starttime, endtime, stations, channels=['HH*'])
+
+        eventid = get_eID(ev)
+
+        msd_outpath = path.join(
+            outpath,
+            MSD_FNAME_FMT.format(**st_to_fname(label, st))
+        )
+        xml_outpath = path.join(
+            outpath,
+            XML_FNAME_FMT.format(**st_to_fname(label, st))
+        )
+
+        st.write(msd_outpath, format='MSEED')
+        ev.write(xml_outpath, format='QUAKEML')
+    return
+
+
+def extract_gdocs(cat_filepath, stations, pre, pos, outpath, label):
+    for datetimes in iterate_days(cat_filepath):
+        print(datetimes[0].date)
+
+        st = Stream()
+        for station in stations:
+            for channel in ['HHE', 'HHN', 'HHZ']:
+                st += read(
+                    DB_MSEED_PATH_FMT.format(
+                        waves_path = WAVES_PATH,
+                        year   = datetimes[0].year,
+                        julday = datetimes[0].julday,
+                        station = station,
+                        channel = channel
+                    )
+                )
+
+        for datetime in datetimes:
+            _st = st.slice(starttime=datetime-pre, endtime=datetime+pos)
+            msd_outpath = path.join(
+                outpath,
+                MSD_FNAME_FMT.format(**st_to_fname(label, _st))
+            )
+            _st.write(msd_outpath, format='MSEED')
+    return
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    df = pd.read_csv(args.stations)
+    stations = list(df.station.unique())
+
+    if args.mode == 'pha':
+        extract_pha(args.cat_filepath, stations, args.pre, args.pos,
+                    args.outpath, args.label)
+    elif args.mode == 'gdocs':
+        extract_gdocs(args.cat_filepath, stations, args.pre, args.pos,
+                      args.outpath, args.label)
