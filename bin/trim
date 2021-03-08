@@ -81,23 +81,24 @@ def extract_gdocs(cat_filepath, stations, pre, pos, outpath, label):
         st = Stream()
         for station in stations:
             for channel in ['HHE', 'HHN', 'HHZ']:
-                st += read(
-                    DB_MSEED_PATH_FMT.format(
-                        waves_path = WAVES_PATH,
-                        year   = datetimes[0].year,
-                        julday = datetimes[0].julday,
-                        station = station,
-                        channel = channel
-                    )
+                filepath = DB_MSEED_PATH_FMT.format(
+                    waves_path = WAVES_PATH,
+                    year       = datetimes[0].year,
+                    julday     = datetimes[0].julday,
+                    station    = station,
+                    channel    = channel
                 )
+                if path.isfile(filepath):
+                    st += read(filepath)
 
         for datetime in datetimes:
             _st = st.slice(starttime=datetime-pre, endtime=datetime+pos)
-            msd_outpath = path.join(
-                outpath,
-                MSD_FNAME_FMT.format(**st_to_fname(label, _st))
-            )
-            _st.write(msd_outpath, format='MSEED')
+            if len(_st) > 0:
+                msd_outpath = path.join(
+                    outpath,
+                    MSD_FNAME_FMT.format(**st_to_fname(label, _st))
+                )
+                _st.write(msd_outpath, format='MSEED')
     return
 
 
