@@ -9,7 +9,8 @@ import json
 from obspy import read, UTCDateTime
 
 # Local files
-from lakiy_utils.waveform import st_to_lakiy
+from vsr_db_utils.waveform import st_to_lakiy
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -31,7 +32,10 @@ if __name__ == '__main__':
     for eventid in eventids:
         print(eventid)
 
-        label = eventid.split('.')[0]
+        if args.mode == 'detection':
+            label = 'SNL'
+        else:
+            label = eventid.split('.')[0]
 
         msd_fpath = path.join(args.inppath, eventid + '.mseed')
         jsn_fpath = path.join(args.inppath, eventid + '.json')
@@ -59,4 +63,3 @@ if __name__ == '__main__':
             tr.trim(starttime, endtime)
 
         st_to_lakiy(st, label, args.outpath, args.mode)
-        exit()

@@ -52,7 +52,8 @@ def extract(waves_path, starttime, endtime, stations, channels=['*']):
 if __name__ == '__main__':
     args = parse_args()
 
-    filenames = [f for f in listdir(args.inppath) if f[-4:] == '.msd']
+    filenames = [f for f in listdir(args.inppath) if f[-6:] == '.mseed']
+
     filenames.sort()
     for filename in filenames:
 

@@ -19,7 +19,6 @@ setup(
     ],
     scripts          = [
         'bin/VT-filter-db',
-        'bin/VT-pick',
         'bin/check-swarm',
         'bin/db-stats',
         'bin/db-to-lakiy',
@@ -27,6 +26,7 @@ setup(
         'bin/download-segments',
         'bin/download-waves',
         'bin/filter-db',
+        'bin/pick',
         'bin/trim',
         'bin/txt-to-swarm',
         'bin/waves-add-CVTR'

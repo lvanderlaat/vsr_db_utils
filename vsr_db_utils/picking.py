@@ -109,7 +109,7 @@ def pick(tr, freqmin=1, freqmax=25, p=None):
     def _pick(event):
         if event.button == 3:
             for ax in [ax1, ax2]:
-                ax.axvline(x=event.xdata, linewidth=1, c='r')
+                ax.axvline(x=event.xdata, linewidth=2, c='r')
             t = tr.stats.starttime + event.xdata
             times.append(t)
 
@@ -130,7 +130,7 @@ def pick(tr, freqmin=1, freqmax=25, p=None):
 
     if p is not None:
         for ax in [ax1, ax2]:
-            ax.axvline(x=p.time-tr.stats.starttime, linewidth=1, c='b')
+            ax.axvline(x=p.time-tr.stats.starttime, linewidth=2, c='r')
 
     fig.canvas.mpl_connect('button_press_event', _pick)
     plt.show()
