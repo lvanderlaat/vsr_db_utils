@@ -15,7 +15,12 @@ def get_blocks(cat_filepath):
 def get_datetimes(block):
     date  = block.split('\n')[0]
     times = block.split('\n')[1].split(',')
-    return [UTCDateTime(date+time) for time in times]
+    utcdatetimes = []
+    for time in times:
+        print(time)
+        utcdatetimes.append(UTCDateTime(date+time))
+    # return [UTCDateTime(date+time) for time in times]
+    return utcdatetimes
 
 
 def iterate_days(cat_filepath):
