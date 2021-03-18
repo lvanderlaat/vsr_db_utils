@@ -65,7 +65,7 @@ def lakiy_header(st):
 
 
 def _st_to_lakiy(st, label, outpath, header):
-    X = np.array([tr.data for tr in st]).T
+    X = np.stack([tr.data for tr in st]).T
 
     t = min(tr.stats.starttime for tr in st)
 

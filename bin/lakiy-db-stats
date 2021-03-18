@@ -1,0 +1,47 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from collections import Counter
+from os import path, listdir
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('folderpath', help='Path to database folder')
+args = parser.parse_args()
+
+labels = [f.split('.')[1] for f in listdir(args.folderpath)]
+
+count = dict(Counter(labels))
+
+print('\n\tLabel\tNumber of samples')
+print('\t=====\t=================')
+for label, n in count.items():
+    print(f'\t{label}\t{n}')
+
+for label in set(labels):
+    filepaths = [
+        path.join(args.folderpath, f) for f in listdir(args.folderpath)
+        if label in f
+    ]
+    data = {}
+    for filepath in filepaths:
+        with open(filepath) as f:
+            header = f.readline()
+            stations = list(set(s.split('-')[0] for s in header.split()))
+            for station in stations:
+                if station not in data.keys():
+                    data[station] = 1
+                else:
+                    data[station] += 1
+
+    print(f' {label} '.center(80, '-'), '\n')
+    print('\tStation\tNumber of samples')
+    print('\t=======\t=================')
+    for station, n in sorted(data.items()):
+        print(f'\t{station}\t{n}')
+print()
+
+
+
+

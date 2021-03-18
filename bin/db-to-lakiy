@@ -12,6 +12,9 @@ from obspy import read, UTCDateTime
 from vsr_db_utils.waveform import st_to_lakiy
 
 
+SAMPLING_RATE = 100
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--inppath', help='Input folder path')
@@ -28,6 +31,7 @@ if __name__ == '__main__':
     eventids = list(set([
         path.splitext(f)[0] for f in listdir(args.inppath) if f != '.DS_Store'
     ]))
+    eventids.sort()
 
     for eventid in eventids:
         print(eventid)
@@ -45,12 +49,16 @@ if __name__ == '__main__':
 
         with open(jsn_fpath) as f:
             d = json.load(f)
+            if not bool(d): # empty dict
+                continue
 
         stations = list(d.keys())
 
         duration = min(
             UTCDateTime(d[s]['Cs']) - UTCDateTime(d[s]['P']) for s in stations
         ) + args.pre
+
+        n_samples = int(100*duration)
 
         for tr in st:
             station = tr.stats.station
@@ -61,5 +69,6 @@ if __name__ == '__main__':
             starttime = UTCDateTime(d[station]['P']) - args.pre
             endtime   = starttime + duration
             tr.trim(starttime, endtime)
+            tr.data = tr.data[0:n_samples]
 
         st_to_lakiy(st, label, args.outpath, args.mode)
