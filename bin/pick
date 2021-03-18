@@ -80,7 +80,8 @@ if __name__ == '__main__':
         JSN_FNAME_FMT.format(**st_to_fname(label, st))
     )
 
-    system(f'cp {msd_filepath} {msd_outpath}')
+    if len(d) > 0:
+        system(f'cp {msd_filepath} {msd_outpath}')
 
-    with open(jsn_outpath, 'w') as f:
-        json.dump(d, f, indent=4)
+        with open(jsn_outpath, 'w') as f:
+            json.dump(d, f, indent=4)
