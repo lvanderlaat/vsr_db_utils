@@ -1,0 +1,95 @@
+#!/opt/antelope/python2.7.6/bin/python
+''' Programa para leer datos de la base vulca y crear archivo con lon,lat,depth,ml,time '''
+'''__author__= 'Javier Fco. Pacheco: javier.pacheco.alvarado@una.cr' '''
+
+from optparse import OptionParser
+import os, sys
+
+sys.path.append(os.environ['ANTELOPE'] + '/data/python')
+
+import antelope.datascope as datascope
+import antelope.stock as stock
+
+
+AUTO_AUTH_PREFIX = ['oa', 'ol', 'or']
+
+
+def parse_args():
+    parser = OptionParser()
+    parser.add_option('-b', '--db', action = 'store',
+                      type = 'string', dest = 'dbase', help = 'data base name')
+    parser.add_option('-i', '--itime', action = 'store',
+                      type = 'string', dest = 'itime', help = 'yyy-mm-dd hr:mn:se')
+    parser.add_option('-e','--etime', action = 'store',
+                      type = 'string', dest='etime', help = 'yyy-mm-dd hr:mn:se')
+    parser.add_option('-o','--output', action = 'store',
+                      type = 'string', dest = 'ofile', help = 'output_file')
+    (options, args) = parser.parse_args()
+    print options.dbase
+    if options.dbase == None or options.itime == None :
+        parser.error('Se requiere el nombre de la base de datos y el dia ')
+    return options
+
+
+def main():
+    options = parse_args()
+
+    # Database
+    dbase = options.dbase
+    db = datascope.dbopen(dbase,'r')
+
+    # Start time
+    stime = stock.str2epoch(options.itime)
+
+    # End time
+    if options.etime == None:
+        etime = stime + 60
+    else:
+        etime = stock.str2epoch(options.etime)
+
+    # Output file
+    if options.ofile == None:
+        ofile = 'events.csv'
+    else:
+        ofile = options.ofile
+
+    try:
+        of = file(ofile, 'w')
+        of.write(
+            'longitude,latitude,depth,magnitude,time,author\n'
+        )
+    except:
+        print 'No se puede crear archivo de salida'
+        sys.exit(-1)
+
+    db = db.lookup('','origin','','')
+    db = db.sort(['origin.time'])
+    db = db.subset('time > %s' % stime)
+    nrecs = db.record_count
+    if not nrecs:
+        exit('No records in origin table')
+
+    db = db.join('event')
+    db = db.join('netmag')
+    db = db.subset('prefor == orid')
+    db = db.subset('time < %s' % etime)
+
+    nrecs = db.record_count
+    if not nrecs:
+        exit('No records within time interval')
+
+    for record in db.iter_record() :
+        [lat, lon, depth, orid_time, mag, auth] = record.getv(
+            'lat', 'lon', 'depth', 'time', 'magnitude', 'auth'
+        )
+        otime = stock.epoch2str(orid_time,'%Y-%m-%d %H:%M:%S.%s')
+        if auth[:2] not in AUTO_AUTH_PREFIX:
+                output = '%s,%s,%s,%s,%s,%s\n' % (
+                    lon, lat, depth, mag, otime, auth
+                )
+                of.write(output)
+    db.free()
+    of.close()
+
+if __name__ == '__main__':
+    main()

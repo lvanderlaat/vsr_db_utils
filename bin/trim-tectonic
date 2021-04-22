@@ -1,0 +1,39 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import path
+
+# Other dependencies
+import pandas as pd
+
+# Local files
+from vsr_db_utils.trimming import extract_tectonics
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--cat_filepath', help='Catalog filepath')
+    parser.add_argument('-s', '--stations', help='Path to stations csv file')
+    parser.add_argument('-o', '--outpath', help='Output folder path')
+    parser.add_argument('-l', '--label', help='VT/TEC etc.')
+    parser.add_argument('--latitude', type=float, help='Centroid of stations',
+                       default=10.02)
+    parser.add_argument('--longitude', type=float, help='Centroid of stations',
+                        default=-83.759331)
+    parser.add_argument('-b', '--pre', type=int, help='Seconds Before pick', default=30)
+    parser.add_argument('-a', '--pos', type=int, help='Seconds After S pick', default=60)
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+
+    df = pd.read_csv(args.stations)
+    stations = list(df.station.unique())
+
+    extract_tectonics(args.cat_filepath, stations, args.pre, args.pos,
+                      args.outpath, args.label, args.latitude, args.longitude)
+
+
+if __name__ == '__main__':
+    main()
