@@ -1,5 +1,6 @@
 # Python Standard Library
 from os import path
+import json
 
 # Other dependencies
 from obspy import Stream, read, UTCDateTime
@@ -109,6 +110,7 @@ def extract_tectonics(cat_filepath, stations, pre, pos, outpath, label,
                     st += read(filepath)
 
         for i, row in df.iterrows():
+            print(row.time)
             source_depth_in_km = row.depth
             if source_depth_in_km < 0:
                 source_depth_in_km = 0
@@ -166,6 +168,3 @@ def extract_tectonics(cat_filepath, stations, pre, pos, outpath, label,
             )
             with open(jsn_outpath, 'w') as f:
                 json.dump(d, f, indent=4)
-            print(); exit()
-
-

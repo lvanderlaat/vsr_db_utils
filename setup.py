@@ -19,17 +19,16 @@ setup(
     ],
     scripts          = [
         'bin/VT-filter-db',
+        'bin/antelope-catalog',
         'bin/check-swarm',
         'bin/db-to-lakiy',
-        'bin/download-retro',
-        'bin/download-segments',
-        'bin/download-waves',
         'bin/filter-db',
         'bin/lakiy-db-stats',
         'bin/pick',
         'bin/trim',
+        'bin/trim-tectonic',
         'bin/txt-to-swarm',
-        'bin/waves-add-CVTR'
+        'bin/waves-add-CVTR',
     ],
     zip_safe         = False
 )
