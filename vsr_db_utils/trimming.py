@@ -90,11 +90,10 @@ def extract_gdocs(cat_filepath, stations, pre, pos, outpath, label):
     return
 
 
-def extract_tectonics(cat_filepath, stations, pre, pos, outpath, label,
-                      latitude, longitude):
+def extract_tectonics(df, stations, pre, pos, outpath, label, latitude, longitude):
     model = TauPyModel(model='iasp91')
 
-    for date, df in tectonic.iterate_days(cat_filepath):
+    for date, df in tectonic.iterate_days(df):
         date = UTCDateTime(date)
         st = Stream()
         for station in stations:
@@ -153,14 +152,6 @@ def extract_tectonics(cat_filepath, stations, pre, pos, outpath, label,
                 magnitude=row.magnitude,
                 time=row.time
             )
-
-            station = ''
-            for tr in st:
-                if station == tr.stats.station:
-                    continue
-                station = tr.stats.station
-                d[station] = {}
-                d[station]['P']  = str(p)
 
             jsn_outpath = path.join(
                 outpath,

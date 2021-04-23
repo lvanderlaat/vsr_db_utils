@@ -5,7 +5,10 @@ import argparse
 from os import path
 
 # Other dependencies
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from obspy.geodetics import gps2dist_azimuth, kilometers2degrees
 
 # Local files
 from vsr_db_utils.trimming import extract_tectonics
@@ -23,7 +26,58 @@ def parse_args():
                         default=-83.759331)
     parser.add_argument('-b', '--pre', type=int, help='Seconds Before pick', default=30)
     parser.add_argument('-a', '--pos', type=int, help='Seconds After S pick', default=60)
+    parser.add_argument('-t', '--a', type=float, help='Threshold', default=12)
     return parser.parse_args()
+
+def filter_df(df, latitude, longitude, a):
+    distance_km, distance_degrees = [], []
+    for i, row in df.iterrows():
+        m, _, _ = gps2dist_azimuth(
+            latitude, longitude, row.latitude, row.longitude
+        )
+        distance_km.append(m/1e3)
+        distance_degrees.append(kilometers2degrees(m/1e3))
+
+    df['distance_km'] = distance_km
+    df['distance_degrees'] = distance_degrees
+
+    accepted = df[df.distance_km <= a*np.exp(df.magnitude)]
+    rejected = df[df.distance_km >  a*np.exp(df.magnitude)]
+    return accepted, rejected
+
+
+def plot(accepted, rejected, a):
+    fig = plt.figure(figsize=(4, 4))
+    fig.suptitle(
+        f'a = {a}, accepted = {len(accepted)}, rejected = {len(rejected)}'
+    )
+
+    ax = fig.add_subplot(111)
+    ax.set_xlabel('Magnitude')
+    ax.set_ylabel('Distance [km]')
+
+    ax.scatter(accepted.magnitude, accepted.distance_km, label='Accepted')
+    ax.scatter(rejected.magnitude, rejected.distance_km, label='Rejected')
+
+    ax.legend()
+
+    if len(accepted) > 0:
+        magnitude = np.arange(
+            min(accepted.magnitude.min(), rejected.magnitude.min()) - 0.1,
+            max(accepted.magnitude.max(), rejected.magnitude.max()) + 0.1,
+            0.1
+        )
+    else:
+        magnitude = np.arange(
+            min(rejected.magnitude.min(), rejected.magnitude.min()) - 0.1,
+            max(rejected.magnitude.max(), rejected.magnitude.max()) + 0.1,
+            0.1
+        )
+
+    ax.plot(magnitude, a*np.exp(magnitude))
+    plt.show()
+    return
+
 
 def main():
     args = parse_args()
@@ -31,9 +85,16 @@ def main():
     df = pd.read_csv(args.stations)
     stations = list(df.station.unique())
 
-    extract_tectonics(args.cat_filepath, stations, args.pre, args.pos,
-                      args.outpath, args.label, args.latitude, args.longitude)
+    df = pd.read_csv(args.cat_filepath)
 
+    accepted, rejected = filter_df(df, args.latitude, args.longitude, args.a)
+
+    plot(accepted, rejected, args.a)
+
+    extract = input('Continue? [y/n]\n\t')
+    if extract == 'y':
+        extract_tectonics(accepted, stations, args.pre, args.pos,
+                          args.outpath, args.label, args.latitude, args.longitude)
 
 if __name__ == '__main__':
     main()
