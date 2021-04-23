@@ -41,8 +41,10 @@ def filter_df(df, latitude, longitude, a):
     df['distance_km'] = distance_km
     df['distance_degrees'] = distance_degrees
 
-    accepted = df[df.distance_km <= a*np.exp(df.magnitude)]
-    rejected = df[df.distance_km >  a*np.exp(df.magnitude)]
+    # accepted = df[df.distance_km <= a*np.exp(df.magnitude)]
+    # rejected = df[df.distance_km >  a*np.exp(df.magnitude)]
+    accepted = df[df.distance_km <= a*np.exp(df.magnitude-1)]
+    rejected = df[df.distance_km >  a*np.exp(df.magnitude-1)]
     return accepted, rejected
 
 
@@ -74,7 +76,7 @@ def plot(accepted, rejected, a):
             0.1
         )
 
-    ax.plot(magnitude, a*np.exp(magnitude))
+    ax.plot(magnitude, a*np.exp(magnitude-3))
     plt.show()
     return
 
