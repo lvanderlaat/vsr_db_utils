@@ -89,12 +89,11 @@ def main():
 
     df = pd.read_csv(args.cat_filepath)
 
+    a = args.a
     b = 0
     accepted, rejected = filter_df(df, args.latitude, args.longitude, a, b)
 
     plot(accepted, rejected, a, b)
-    print(); exit()
-
 
     extract = input('Continue? [y/n]\n\t')
     if extract == 'y':
