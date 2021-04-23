@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('-t', '--a', type=float, help='Threshold', default=12)
     return parser.parse_args()
 
-def filter_df(df, latitude, longitude, a):
+def filter_df(df, latitude, longitude, a, b):
     distance_km, distance_degrees = [], []
     for i, row in df.iterrows():
         m, _, _ = gps2dist_azimuth(
@@ -43,15 +43,15 @@ def filter_df(df, latitude, longitude, a):
 
     # accepted = df[df.distance_km <= a*np.exp(df.magnitude)]
     # rejected = df[df.distance_km >  a*np.exp(df.magnitude)]
-    accepted = df[df.distance_km <= a*np.exp(df.magnitude-1)]
-    rejected = df[df.distance_km >  a*np.exp(df.magnitude-1)]
+    accepted = df[df.distance_km <= a*np.exp(df.magnitude+b)]
+    rejected = df[df.distance_km >  a*np.exp(df.magnitude+b)]
     return accepted, rejected
 
 
-def plot(accepted, rejected, a):
+def plot(accepted, rejected, a, b):
     fig = plt.figure(figsize=(4, 4))
     fig.suptitle(
-        f'a = {a}, accepted = {len(accepted)}, rejected = {len(rejected)}'
+        f'a = {a}, b = {b}, accepted = {len(accepted)}, rejected = {len(rejected)}'
     )
 
     ax = fig.add_subplot(111)
@@ -76,7 +76,7 @@ def plot(accepted, rejected, a):
             0.1
         )
 
-    ax.plot(magnitude, a*np.exp(magnitude-3))
+    ax.plot(magnitude, a*np.exp(magnitude+b))
     plt.show()
     return
 
@@ -89,9 +89,12 @@ def main():
 
     df = pd.read_csv(args.cat_filepath)
 
-    accepted, rejected = filter_df(df, args.latitude, args.longitude, args.a)
+    b = 0
+    accepted, rejected = filter_df(df, args.latitude, args.longitude, a, b)
 
-    plot(accepted, rejected, args.a)
+    plot(accepted, rejected, a, b)
+    print(); exit()
+
 
     extract = input('Continue? [y/n]\n\t')
     if extract == 'y':
