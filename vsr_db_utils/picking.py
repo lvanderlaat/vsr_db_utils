@@ -131,7 +131,11 @@ def pick(tr, freqmin=1, freqmax=25, p=None):
 
     if p is not None:
         for ax in [ax1, ax2]:
-            ax.axvline(x=p.time-tr.stats.starttime, linewidth=2, c='r')
+            try:
+                ax.axvline(x=p.time-tr.stats.starttime, linewidth=2, c='r')
+            except:
+                ax.axvline(x=p-tr.stats.starttime, linewidth=2, c='r')
+
 
     fig.canvas.mpl_connect('button_press_event', _pick)
     multi = MultiCursor(fig.canvas, (ax1, ax2), color='r', lw=1)

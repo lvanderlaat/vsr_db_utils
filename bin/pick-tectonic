@@ -1,0 +1,89 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import path, system, listdir
+import json
+
+# Other dependencies
+from obspy import read, read_events, UTCDateTime
+
+# Local files
+from vsr_db_utils.picking import pick
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--inppath', help='Input folder path')
+    parser.add_argument('-o', '--outpath', help='Output folder path')
+    parser.add_argument('-e', '--eventid', help='Filename')
+    return parser.parse_args()
+
+
+FNAME_FMT = '{label}.{year}.{julday:03d}.{hour:02d}.{minute:02d}.{second:02d}'
+
+JSN_FNAME_FMT = FNAME_FMT + '.json'
+MSD_FNAME_FMT = FNAME_FMT + '.mseed'
+
+
+def st_to_fname(label, st):
+    starttime = min(tr.stats.starttime for tr in st)
+    return dict(
+        label  = label,
+        year   = starttime.year,
+        julday = starttime.julday,
+        hour   = starttime.hour,
+        minute = starttime.minute,
+        second = starttime.second
+    )
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    msd_filepath = sorted(
+        path.join(args.inppath, f) for f in listdir(args.inppath)
+        if '.mseed' in f
+    )[0]
+
+    st = read(msd_filepath)
+
+    stations = list(set([tr.stats.station for tr in st]))
+
+    jsn_filepath = msd_filepath[:-5] + 'json'
+
+    label = msd_filepath.split('.')[0]
+
+    with open(jsn_filepath) as f:
+        d = json.load(f)
+
+    for tr in st:
+        if tr.stats.component != 'Z':
+            continue
+
+        print(f'{tr.stats.station}-{tr.stats.channel}')
+
+#         times = pick(tr, p=UTCDateTime(d[tr.stats.station]['P']))
+
+#         if len(times) == 2:              # both P and coda just picked
+#             d[tr.stats.station] = {}
+#             d[tr.stats.station]['P']  = str(min(times))
+#             d[tr.stats.station]['Cs'] = str(max(times))
+#         else:
+#             del d[tr.stats.station]
+
+    if any(station in d.keys() for station in stations):
+        outdir = path.join(args.outpath, 'accepted')
+    else:
+        outdir = path.join(args.outpath, 'rejected')
+
+    print(outdir)
+    msd_outpath = MSD_FNAME_FMT.format(**st_to_fname(label, st))
+    jsn_outpath = JSN_FNAME_FMT.format(**st_to_fname(label, st))
+    print(msd_outpath, jsn_outpath); exit()
+
+
+    system(f'mv {msd_filepath} {msd_outpath}')
+
+    with open(jsn_outpath, 'w') as f:
+        json.dump(d, f, indent=4)
