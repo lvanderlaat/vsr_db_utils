@@ -25,6 +25,7 @@ setup(
         'bin/filter-db',
         'bin/lakiy-db-stats',
         'bin/pick',
+        'bin/pick-tectonic',
         'bin/trim',
         'bin/trim-tectonic',
         'bin/txt-to-swarm',
