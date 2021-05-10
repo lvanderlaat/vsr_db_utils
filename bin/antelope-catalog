@@ -1,4 +1,5 @@
 #!/opt/antelope/python2.7.6/bin/python
+
 ''' Programa para leer datos de la base vulca y crear archivo con lon,lat,depth,ml,time '''
 '''__author__= 'Javier Fco. Pacheco: javier.pacheco.alvarado@una.cr' '''
 
@@ -18,12 +19,24 @@ def parse_args():
     parser = OptionParser()
     parser.add_option('-b', '--db', action = 'store',
                       type = 'string', dest = 'dbase', help = 'data base name')
+
     parser.add_option('-i', '--itime', action = 'store',
                       type = 'string', dest = 'itime', help = 'yyy-mm-dd hr:mn:se')
     parser.add_option('-e','--etime', action = 'store',
                       type = 'string', dest='etime', help = 'yyy-mm-dd hr:mn:se')
+
     parser.add_option('-o','--output', action = 'store',
                       type = 'string', dest = 'ofile', help = 'output_file')
+
+    parser.add_option('--xmin', type=float, help='Minimum longitude',
+                      default=-180)
+    parser.add_option('--xmax', type=float, help='Maximum longitude',
+                      default=180)
+    parser.add_option('--ymin', type=float, help='Minimum latitude',
+                      default=-90)
+    parser.add_option('--ymax', type=float, help='Maximum latitude',
+                      default=90)
+
     (options, args) = parser.parse_args()
     print options.dbase
     if options.dbase == None or options.itime == None :
@@ -73,6 +86,11 @@ def main():
     db = db.join('netmag')
     db = db.subset('prefor == orid')
     db = db.subset('time < %s' % etime)
+
+    db = db.subset('lon > %s' % xmin)
+    db = db.subset('lon < %s' % xmax)
+    db = db.subset('lat > %s' % ymin)
+    db = db.subset('lat < %s' % ymax)
 
     nrecs = db.record_count
     if not nrecs:
