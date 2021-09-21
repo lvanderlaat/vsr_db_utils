@@ -1,0 +1,114 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from glob import glob
+from os import listdir, path, system
+
+# Other dependencies
+from obspy import read, Stream
+
+# Local files
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--inppath', help='Input folder path')
+    parser.add_argument('-o', '--outpath', help='Output folder path')
+    parser.add_argument('-w', '--waves_path', help='Raw waveforms path',
+                        default='/Volumes/leo_1/VULCANOLOGIA/TURRIALBA/CVTR')
+    parser.add_argument('-s', '--station', help='Station to add')
+    return parser.parse_args()
+
+
+def cvtr(waves_path, starttime, endtime, stations, channels=['*']):
+    DB_MSEED_PATH_FMT = (
+        '{waves_path}'
+        '/{year}/{channel}/'
+        '{year}{month:02d}{day:02d}{hour:02d}00'
+        '_TC_{station}_{channel}__.sac'
+    )
+
+    st = Stream()
+
+    for hour in range(starttime.hour, endtime.hour+1, 1):
+        for station in stations:
+            for channel in channels:
+                filepath = DB_MSEED_PATH_FMT.format(
+                    waves_path=waves_path,
+                    year=starttime.year,
+                    month=starttime.month,
+                    day=starttime.day,
+                    hour=hour,
+                    station=station,
+                    channel=channel
+                )
+                if len(glob(filepath)) > 0:
+                    st += read(filepath, starttime=starttime, endtime=endtime)
+                else:
+                    print('{}.{} not found'.format(station, channel))
+    return st
+
+
+def vps5(waves_path, starttime, endtime, stations, channels=['*']):
+    PATH_FMT =  (
+        '{waves_path}'
+        '/{year}/HHZ/'
+        '{year}-{month:02d}-{day:02d}-{hour:02d}*'
+    )
+    st = Stream()
+
+    for hour in range(starttime.hour, endtime.hour+1, 1):
+        for station in stations:
+            for channel in channels:
+                filepath = PATH_FMT.format(
+                    waves_path = waves_path,
+                    year       = starttime.year,
+                    month      = starttime.month,
+                    day        = starttime.day,
+                    hour       = hour,
+                    channel    = channel
+                )
+
+                if len(glob(filepath)) > 0:
+                    st += read(filepath, starttime=starttime, endtime=endtime)
+                else:
+                    print('{}.{} not found'.format(station, channel))
+
+    return st
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    filenames = [f for f in listdir(args.inppath) if f[-6:] == '.mseed']
+
+    functions = {'CVTR': cvtr, 'VPS5': vps5}
+
+    filenames.sort()
+    for filename in filenames:
+
+        filepath_inp = path.join(args.inppath, filename)
+        filepath_out = path.join(args.outpath, filename)
+
+        st = read(filepath_inp, headonly=True)
+
+        stations = list(set([tr.stats.station for tr in st]))
+
+        if args.station not in stations:
+            print(filename)
+            st = read(filepath_inp)
+            starttime = min([tr.stats.starttime for tr in st])
+            endtime = max([tr.stats.endtime for tr in st])
+            _st = functions[args.station](
+                args.waves_path, starttime, endtime, [args.station]
+            )
+            if len(st) > 0:
+                for tr in _st:
+                    st += _st
+            for tr in st:
+                if tr.stats.channel == 'HH Z':
+                    tr.stats.channel = 'HHZ'
+            st.write(filepath_out, format='MSEED')
+        else:
+            system(f'cp {filepath_inp} {filepath_out}')

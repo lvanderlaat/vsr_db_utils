@@ -26,10 +26,12 @@ setup(
         'bin/lakiy-db-stats',
         'bin/pick',
         'bin/pick-tectonic',
+        'bin/repick',
         'bin/trim',
+        'bin/trim-noise',
         'bin/trim-tectonic',
         'bin/txt-to-swarm',
-        'bin/waves-add-CVTR',
+        'bin/waves-add-SAC',
     ],
     zip_safe         = False
 )

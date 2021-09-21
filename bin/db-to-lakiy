@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('-i', '--inppath', help='Input folder path')
     parser.add_argument('-o', '--outpath', help='Output folder path')
     parser.add_argument('-m', '--mode', help='detection/classification')
+    parser.add_argument('-l', '--label', help='SNL/RND, works with mode == detection')
     parser.add_argument('--pre', default=0.25, type=float,
                         help='Seconds before pick')
     return parser.parse_args()
@@ -37,7 +38,7 @@ if __name__ == '__main__':
         print(eventid)
 
         if args.mode == 'detection':
-            label = 'SNL'
+            label = args.label
         else:
             label = eventid.split('.')[0]
 
@@ -52,7 +53,8 @@ if __name__ == '__main__':
             if not bool(d): # empty dict
                 continue
 
-        stations = list(d.keys())
+        not_keys = ['longitude', 'latitude', 'depth', 'time', 'magnitude']
+        stations = [key for key in d.keys() if key not in not_keys]
 
         duration = min(
             UTCDateTime(d[s]['Cs']) - UTCDateTime(d[s]['P']) for s in stations

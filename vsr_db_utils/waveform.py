@@ -84,12 +84,21 @@ def st_to_lakiy(st, label, outpath, mode, window_length=3.99):
     header = lakiy_header(st)
 
     if mode == 'detection':
-        st.trim(
-            max(tr.stats.starttime for tr in st),
-            min(tr.stats.endtime for tr in st)
-        )
-        for _st in st.slide(window_length=window_length, step=window_length):
-            _st_to_lakiy(_st, label, outpath, header)
+        try:
+            st.trim(
+                max(tr.stats.starttime for tr in st),
+                min(tr.stats.endtime for tr in st)
+            )
+        except Exception as e:
+            print(e)
+        try:
+            for _st in st.slide(window_length=window_length, step=window_length):
+                _st_to_lakiy(_st, label, outpath, header)
+        except Exception as e:
+            print(e)
     elif mode == 'classification':
-        _st_to_lakiy(st, label, outpath, header)
+        try:
+            _st_to_lakiy(st, label, outpath, header)
+        except Exception as e:
+            print(e)
     return

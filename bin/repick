@@ -1,0 +1,50 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+from os import path
+import json
+import logging
+
+# Other dependencies
+from obspy import read
+
+# Local files
+from vsr_db_utils.picking import pick
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--inppath', help='Input folder path')
+    parser.add_argument('-e', '--eventid', help='Filename')
+    parser.add_argument('-s', '--station', help='station')
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    msd_filepath = path.join(args.inppath, args.eventid + '.mseed')
+    st = read(msd_filepath)
+
+    jsn_filepath = path.join(args.inppath, args.eventid + '.json')
+    with open(jsn_filepath) as f:
+        d = json.load(f)
+
+    tr = st.select(station=args.station, component='Z')[0]
+
+    times = pick(tr)
+
+    if len(times) == 2:
+        d[tr.stats.station] = {}
+        d[tr.stats.station]['P']  = str(min(times))
+        d[tr.stats.station]['Cs'] = str(max(times))
+    else:
+        logging.warning(f'Trace picked {len(times)} times.')
+
+    with open(jsn_filepath, 'w') as f:
+        json.dump(d, f, indent=4)
+
+
+if __name__ == '__main__':
+    main()

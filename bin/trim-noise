@@ -1,0 +1,110 @@
+#!/anaconda3/bin/python3
+
+# Python Standard Library
+import argparse
+import json
+from os import path
+
+# Other dependencies
+from obspy import UTCDateTime
+from obspy.clients.fdsn import Client
+import pandas as pd
+
+# Local files
+from vsr_db_utils.io import JSN_FNAME_FMT, MSD_FNAME_FMT, st_to_fname
+
+
+FDSN_URL = 'http://10.10.128.91:8080'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--cat_filepath', help='Catalog filepath')
+    parser.add_argument('-s', '--stations', help='Path to stations csv file')
+    parser.add_argument('-o', '--outpath', help='Output folder path')
+    parser.add_argument('-l', '--label', help='VT/LF etc.')
+    return parser.parse_args()
+
+
+def read_swarm(cat_filepath, check=True):
+    df = pd.read_csv(
+        cat_filepath, names=['datetime', 'station', 'label'],
+        usecols=['datetime', 'label']
+    )
+
+    df.datetime = pd.to_datetime(df.datetime)
+    df1 = df[df.label == 'RND']
+    df2 = df[df.label == 'end']
+
+    for df in [df1, df2]:
+        df.reset_index(drop=True, inplace=True)
+
+    df = pd.concat([df1, df2], axis=1, ignore_index=True)
+
+    if check:
+        delta = df[2] - df[0]
+        df = pd.concat([df1.datetime, delta], axis=1, ignore_index=True)
+        print(df.to_string())
+        print(df[1].sum())
+        return
+
+
+    df = df.drop([1, 3], axis=1)
+    df.columns = ['t1', 't2']
+    return df
+
+
+def extract(client, networks, stations, channels, starttime, endtime, outpath, label):
+    st = client.get_waveforms(
+        networks, stations, '*', channels, starttime, endtime
+    )
+    st.merge(fill_value='interpolate', interpolation_samples=-1)
+
+    if len(st) > 0:
+        msd_outpath = path.join(
+            outpath, MSD_FNAME_FMT.format(**st_to_fname(label, st))
+        )
+        st.write(msd_outpath, format='MSEED')
+
+    _stations = set(tr.stats.station for tr in st)
+
+    d = {}
+    for station in _stations:
+        P  = min(tr.stats.starttime for tr in st.select(station=station))
+        Cs = max(tr.stats.endtime for tr in st.select(station=station))
+        d[station] = {'P': str(P), 'Cs': str(Cs)}
+
+    jsn_outpath = path.join(
+        outpath, JSN_FNAME_FMT.format(**st_to_fname(label, st))
+    )
+
+    with open(jsn_outpath, 'w') as f:
+        json.dump(d, f, indent=4)
+    return
+
+
+def main():
+    args = parse_args()
+
+    df = pd.read_csv(args.stations)
+    networks = ','.join(list(df.network.unique()))
+    stations = ','.join(list(df.station.unique()))
+    channels = ','.join(list(df.channel.unique()))
+
+    read_swarm(args.cat_filepath, check=True)
+    df = read_swarm(args.cat_filepath, check=False)
+
+    client = Client(FDSN_URL)
+
+    for i, row in df.iterrows():
+        print(row.t1)
+        starttime = UTCDateTime(row.t1)
+        endtime   = UTCDateTime(row.t2)
+
+        extract(client, networks, stations, channels, starttime, endtime, args.outpath,
+                args.label)
+    return
+
+
+if __name__ == '__main__':
+    main()
